@@ -1,0 +1,65 @@
+name: crud-demo
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crud
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Chua khai bao POSTGRES_PASSWORD trong file .env}
+      POSTGRES_DB: cruddb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crud -d cruddb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+    
+  migrate:
+    build:
+      context: ./backend
+      target: migrator
+    image: crud-demo-migrate:${TAG:-dev}
+    environment:
+      PGHOST: db
+      PGUSER: crud
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: cruddb
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+      args:
+        GIT_SHA: ${GIT_SHA:-local}
+    image: crud-demo-api:${TAG:-dev}
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__Default: Host=db;Port=5432;Database=cruddb;Username=crud;Password=${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5100:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: 256m
+
+  web:
+    build: ./frontend
+    image: crud-demo-web:${TAG:-dev}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8100:8080"
+    depends_on:
+      - api
+    mem_limit: 64m
+
+volumes:
+  pgdata:
