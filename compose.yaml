@@ -21,7 +21,7 @@ services:
     build:
       context: ./backend
       target: migrator
-    image: crud-demo-migrate:${TAG:-dev}
+    image: ghcr.io/sytombk/crud-demo-migrate:${TAG:-dev}
     environment:
       PGHOST: db
       PGUSER: crud
@@ -38,7 +38,7 @@ services:
       target: runtime
       args:
         GIT_SHA: ${GIT_SHA:-local}
-    image: crud-demo-api:${TAG:-dev}
+    image: ghcr.io/sytombk/crud-demo-api:${TAG:-dev}
     restart: unless-stopped
     environment:
       ConnectionStrings__Default: Host=db;Port=5432;Database=cruddb;Username=crud;Password=${POSTGRES_PASSWORD}
@@ -53,7 +53,7 @@ services:
 
   web:
     build: ./frontend
-    image: crud-demo-web:${TAG:-dev}
+    image: ghcr.io/sytombk/crud-demo-web:${TAG:-dev}
     restart: unless-stopped
     ports:
       - "127.0.0.1:8100:8080"
