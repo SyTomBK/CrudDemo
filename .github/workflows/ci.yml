@@ -87,3 +87,66 @@ jobs:
           for svc in api web migrate; do
             docker push "ghcr.io/sytombk/crud-demo-${svc}:${TAG}"
           done
+
+  deploy:
+    needs: images
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://crud.103-226-249-201.sslip.io
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env: 
+      APP_URL: https://crud.103-226-249-201.sslip.io
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set image tag
+        run: echo "TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Setup SSH
+        env: 
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host crud
+            HostName $SSH_HOST
+            User deploy
+            IdentityFile ~/.ssh/id_ed25519
+            IdentitiesOnly yes
+          EOF
+      
+      - name: Upload compose file
+        run: scp compose.yaml crud:/opt/crud-demo/compose.yaml
+
+      - name: Deploy
+        run: |
+          ssh crud bash -s <<EOF
+          set -euo pipefail
+          cd /opt/crud-demo
+          sed -i 's/^TAG=.*/TAG=${TAG}/' .env
+          docker-compose pull --quiet
+          docker-compose up -d --no-build
+          docker-compose ps -a
+          EOF
+      - name: Verify deployed version
+        run: |
+          for i in $(seq 1 12); do
+            version=$(curl -fsS "$APP_URL/api/info" | jq -r .version || true)
+            echo "Lan thu $i: $version"
+            if [[ "$version" == *"$GITHUB_SHA"* ]]; then
+              echo "Server dang chay dung commit $GITHUB_SHA"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Sau 60 giay, server van chua chay commit $GITHUB_SHA"
+          exit 1
