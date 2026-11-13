@@ -10,6 +10,7 @@ RUN npm run build
 
 # ---------- Giai đoạn 2: phục vụ file tĩnh ----------
 FROM nginxinc/nginx-unprivileged:stable-alpine
+LABEL org.opencontainers.image.source=https://github.com/SyTomBK/CrudDemo
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080

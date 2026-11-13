@@ -33,7 +33,7 @@ jobs:
             exit 1
           fi
 
-  frondend:
+  frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -55,3 +55,35 @@ jobs:
       
       - name: Build
         run: npm run build
+
+  images:
+    needs: [backend, frontend]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    env:
+      GIT_SHA: ${{ github.sha }}
+      POSTGRES_PASSWORD: not-used-during-build
+    
+    steps: 
+      - uses: actions/checkout@v4
+      - name: Set image tag
+        run: echo "TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build images
+        run: docker compose build api web migrate
+
+      - name: Push images (one at a time)
+        run: |
+          for svc in api web migrate; do
+            docker push "ghcr.io/sytombk/crud-demo-${svc}:${TAG}"
+          done

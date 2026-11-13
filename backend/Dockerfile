@@ -16,6 +16,7 @@ RUN dotnet publish src/CrudDemo.Api/CrudDemo.Api.csproj \
 
 # ---------- Giai đoạn 2: runtime ----------
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+LABEL org.opencontainers.image.source=https://github.com/SyTomBK/CrudDemo
 WORKDIR /app
 COPY --from=build /app/publish .
 
@@ -32,6 +33,7 @@ RUN dotnet tool restore \
 
 # ---------- Giai đoạn 4: image chạy migration ----------
 FROM postgres:17-alpine AS migrator
+LABEL org.opencontainers.image.source=https://github.com/SyTomBK/CrudDemo
 COPY --from=migrations-script /out/migrate.sql /migrations/migrate.sql
 USER postgres
 ENTRYPOINT ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/migrations/migrate.sql"]

@@ -9,7 +9,7 @@ namespace CrudDemo.Api.Controllers;
 [Route("api/[controller]")]
 public class ProductsController(AppDbContext db) : ControllerBase
 {
-    // lấy danh sách sản phẩm
+    // lấy danh sách sản phẩmcd
     [HttpGet]
     public async Task<IEnumerable<Product>> GetAll() =>
         await db.Products.OrderByDescending(p => p.Id).ToListAsync();
