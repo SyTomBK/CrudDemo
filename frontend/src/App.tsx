@@ -55,7 +55,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 text-slate-900 antialiased">
       <main className="mx-auto max-w-4xl px-5 py-12">
         <header className="mb-6 flex items-baseline justify-between gap-4">
-          <title>Kho sản phẩm</title>
+          <div className='text-[16px] uppercase'>Kho sản phẩm</div>
           {!loading && <span className="text-slate-500">{products.length} sản phẩm</span>}
         </header>
 
