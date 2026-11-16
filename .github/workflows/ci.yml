@@ -132,6 +132,7 @@ jobs:
           ssh crud bash -s <<EOF
           set -euo pipefail
           cd /opt/crud-demo
+          grep '^TAG=' .env | cut -d= -f2 > .previous_tag
           sed -i 's/^TAG=.*/TAG=${TAG}/' .env
           docker-compose pull --quiet
           docker-compose up -d --no-build
@@ -143,10 +144,25 @@ jobs:
             version=$(curl -fsS "$APP_URL/api/info" | jq -r .version || true)
             echo "Lan thu $i: $version"
             if [[ "$version" == *"$GITHUB_SHA"* ]]; then
+              curl -fsS "$APP_URL/api/products" > /dev/null
               echo "Server dang chay dung commit $GITHUB_SHA"
               exit 0
             fi
             sleep 5
           done
           echo "::error::Sau 60 giay, server van chua chay commit $GITHUB_SHA"
-          exit 1
+          exit 1'
+      
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          ssh crud bash -s <<'EOF'
+          set -euo pipefail
+          cd /opt/crud-demo
+          PREV=$(cat .previous_tag)
+          echo "Quay ve phien ban truoc: $PREV"
+          sed -i "s/^TAG=.*/TAG=$PREV/" .env
+          docker-compose up -d --no-build
+          docker-compose ps -a
+          EOF
+          echo "::error::Deploy that bai, da tu dong quay ve phien ban truoc"
