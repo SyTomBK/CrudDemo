@@ -52,7 +52,8 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = check => check.Tags.Contains("ready")
 });
 
-app.MapGet("/api/info", (HttpContext ctx, IWebHostEnvironment env) => new
+//app.MapGet("/api/info", (HttpContext ctx, IWebHostEnvironment env) => new
+app.MapGet("/api/info-hong", (HttpContext ctx, IWebHostEnvironment env) => new
 {
     environment = env.EnvironmentName,
     scheme = ctx.Request.Scheme,
