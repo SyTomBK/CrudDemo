@@ -152,7 +152,27 @@ jobs:
           done
           echo "::error::Sau 60 giay, server van chua chay commit $GITHUB_SHA"
           exit 1'
-      
+
+      - name: Cleanup old images
+        run: |
+          ssh crud bash -s <<'EOF'
+          set -euo pipefail
+          cd /opt/crud-demo
+          CURRENT=$(grep '^TAG=' .env | cut -d= -f2)
+          PREV=$(cat .previous_tag)
+          echo "Giu lai: $CURRENT (hien tai), $PREV (truoc do)"
+          for svc in api web migrate; do
+            repo="ghcr.io/sytombk/crud-demo-$svc"
+            for tag in $(docker images "$repo" --format '{{.Tag}}'); do
+              if [ "$tag" != "$CURRENT" ] && [ "$tag" != "$PREV" ]; then
+                echo "Xoa $repo:$tag"
+                docker rmi "$repo:$tag" || true
+              fi
+            done
+          done
+          EOF
+
+
       - name: Rollback on failure
         if: failure()
         run: |
